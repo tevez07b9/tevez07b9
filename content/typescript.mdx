@@ -1,0 +1,470 @@
+---
+title: "The Typescript Primer"
+publishedAt: "May 1, 2023"
+summary: "A complete cheat sheet of all common typescript use cases"
+---
+
+## Primitive Types
+
+Primitive types in TS.
+
+- string - For string values
+- number - A integer/number value
+- boolean - `true` or `false` values
+- any - default type, when you don’t define a type. This means anything and this is not the solution when you get type errors in TS.
+
+A simple example
+
+```typescript
+// A function returning string, with 2 params
+// the `?` means that `param2` is not required
+const someVar = (param1: string, param2?: number): string => {
+    ...
+};
+
+// What if my params need more than one data type
+// We can use pipes `|` to define multiple data types.
+// It's called a Union and we will learn about it more in the below sections
+const someVarDoobara = (param1: string, param2: string | number): string => {
+    ...
+}
+```
+
+## Types & Interfaces
+
+Types define the structure of objects or complex data types that we use in our code. For eg, a User or Post object.
+
+Simple example
+
+```typescript
+type User = {
+  firstname: string,
+  lastname?: string,
+};
+
+// a function that accepts 1 param of type user
+const getUserSlug = (user: User): string => {
+    ...
+};
+
+```
+
+### Important Note
+
+Now if we have Types then why do we need Interfaces? I am glad you asked.
+
+A significant difference b/w Type and Interface is that a Type can never be changed. Just like a variable defined using `const` you cannot modify or redeclare it. But with Interfaces, you can extend them and make modifications to them.
+
+For eg: We have a `User` interface, but we want a `LoggedUser` object with an extra `token` field.
+
+With interfaces we can extend the existing one like so:
+
+```typescript
+interface LoggedUser extends User {
+  token: string;
+  expiresAt: number;
+}
+```
+
+So which one do we use?
+
+It mainly comes down to preference. If you don't have one, stick to the interface until you might need something specific to a type.
+
+Most of the time, an interface will be a perfect fit, and it's super declarative to what something is.
+
+## Partial & Required
+
+Typescript comes with several utility types. These are utilities we can use to do type transformations.
+
+Let’s go with our above `User` example. Let’s say at some specific situation we want all fields in `User` to be optional. We can just wrap our Type with `Partial`
+
+Like so:
+
+```typescript
+interface User {
+  firstname: string;
+  lastname?: string;
+  age: number;
+}
+
+// Here we might want to only update a few keys in User
+// Hence we can user Partial, pretty cool huh!
+const updateUserField = (id: number, fieldsToUpdate: Partial<User>) => {
+  return db.update(id, fieldsToUpdate);
+};
+
+updateUserField(1, {
+  firstname: "Talmeez",
+});
+updateUserField(1, {
+  age: 23,
+});
+```
+
+On the other hand, there might be cases where you expect the value to be set. We can use `Required` for that. `Required` makes every field mandatory in the given type.
+
+Let's look at our user example again. By default, you might have an object where the ID is not required since we don't know it yet, but once the user is created, we could set it to be required.
+
+We can use this `User` interface without specifying the ID when creating the user.
+
+But when we want to update the user, we want to ensure the ID is set.
+
+```typescript
+interface User {
+  id?: number;
+  firstname: string;
+  lastname: string;
+}
+
+const updateUser = (user: Required<User>) => {
+  db.update(user);
+};
+
+updateUser({
+  id: 12,
+  firstname: "Talmeez",
+  lastname: "Ahmed",
+});
+```
+
+## Pick & Omit
+
+These are both used to create a new type with only a set of options from the original type. It’s similar to `lodash` Pick & Omit.
+
+Difference:
+
+- Pick only take the items you define you want
+- Omit will pick every item you don't define to omit
+
+Coming back to our `User` example, let’s see how we can use these Utility classes.
+
+```typescript
+interface User {
+  id?: number;
+  firstname: string;
+  lastname?: string;
+  age: number;
+  telephone?: number;
+  twitter?: string;
+}
+```
+
+Now let's say we want to have a separate type that can pass around only the full name, so it doesn't need any other fields?
+
+We can define a new type in which we can define the fields we would like to use.
+
+```typescript
+// We use Pipe `|` as the delimiter here
+// this code will create a type from `firstname` and `lastname`
+// of the User interface
+type UserFullname = Pick<User, "firstname" | "lastname">;
+
+const userName: UserFullname = {
+  firstname: "Talmeez",
+  lastname: "Ahmed",
+};
+```
+
+Omit on the other hand will remove keys that are defined.
+
+For eg:
+
+```typescript
+type UserPostData = Omit<User, "id">;
+
+const updateUser: UserPostData = {
+  firstname: "Talmeez",
+  lastname: "Ahmed",
+  age: 23,
+};
+```
+
+## Combining Utility Types
+
+Do you know where real power comes from? By combining Utility Types, but with great power comes great responsibility 😅
+
+So how do we do this? Let’s say from the above `User` we want to make `id` required but keep the rest of the interface optional. We can choose to make a new type combining `Partial` and `Required`.
+
+```typescript
+interface User {
+  id?: number;
+  firstname: string;
+  lastname: string;
+  age?: number;
+}
+
+// We want to have the id required for logged in user
+// You can combine two types or interface with `&` ampersand
+type LoggedUser = Partial<User> & Required<Pick<User, "id">>;
+
+// Let's understand the above
+// 1 We made entire user partial
+// 2 We picked `id` from User
+// 3 We made `id` required -> { id: number }
+// 4 combine it with partial user
+
+// What if we wanted to keep the rest of the Interface unchanged
+// and only make `id` required
+type LoggedUser = Required<Pick<User, "id">> & Omit<User, "id">;
+
+// Let's understand the above
+// 1 We picked `id` from User
+// 3 We made `id` required -> { id: number }
+// 4 We removed `id` from User with Omit
+// 4 combine it with { id: number }
+```
+
+## Readonly Utility
+
+We all know what a `const` variable is. It cannot be reassigned. But if we have an object, its properties can be changed, even if defined as const. But with TS things are in control. Readonly will make an object become read-only. Even its properties cannot be assigned again.
+
+Let’s look at an e.g, to be more clear.
+
+```typescript
+interface User {
+  id?: number;
+  firstname: string;
+  lastname: string;
+  age?: number;
+}
+
+const user: Readonly<User> = {
+  firstname: "Talmeez",
+  lastname: "Ahmed",
+};
+
+// this will cause and error.
+// Cannot assign to 'firstname' because it is a read-only property.
+user.firstname = "Opportunity";
+```
+
+We will soon see other cases of this Utility further down the road. But first I want to teach you Generics.
+
+## Object Destructuring
+
+Now all of this is cool so far, but what happens when we work with destructured objects. Let’s take a look at some examples.
+
+```typescript
+const user: User = await getUser();
+
+// destructuring....
+const { firstname, lastname } = user;
+
+// if we wanted to define type we can do like
+const { firstname, lastname }: { firstname: string; lastname: string } = user;
+
+// But if we want to use interfaces we could do like this
+// This is way cleaner and my preferred way to do things.
+interface User {
+  firstname: string;
+  age: number;
+}
+const { firstname, age }: User = user;
+```
+
+## Generic Types - IMP
+
+We are moving to a very important topic in TS called `Generics` . Have you ever noticed these `<>` in code, we used that in the above Readonly example. Ever thought about what they are or why are they there. They are called generics and are used when we don’t know the type of inputs we get.
+
+Let’s go with an example:
+
+```typescript
+// This log function expects a string,
+// but we should be able to log and return anything we pass
+// BUT `any` is not the solution, there is a cleaner way
+const logAndReturn = (input: string): string => {
+  console.log(input);
+  return input;
+};
+
+// Here <T> is a type passed by user, or the consumer
+// We use T as the type of input which can be object, string etc.
+const logAndReturn = <T>(input: T): T => {
+  console.log(input);
+  return input;
+};
+
+// Usage as string and number
+logAndReturn<string>("a string");
+logAndReturn<number>(123);
+
+// We can also do complex types
+interface User {
+  firstname: string;
+  lastname: string;
+}
+
+logAndReturn<User>({ firstname: "Talmeez", lastname: "Ahmed" });
+```
+
+## Utility Types with Generics
+
+Now let’s do some advanced stuff. Like Combining Utility Classes with generics. 😎
+
+First, let’s recall our previous example, we made `id` field required in interface `User` using utility classes
+
+```typescript
+interface User {
+  id?: number;
+  firstname: string;
+  lastname: string;
+  age?: number;
+}
+
+// Making a new type with `id` as required
+type LoggedUser = Required<Pick<User, 'id'>> & Omit<User, 'id'>;
+
+const u1:LoggedUser = {
+  id: 1,
+  firstname: 'Talmeez',
+  lastname: 'Ahmed'
+}
+
+// so this code makes `id` required in `User`, but why stop there, what if
+// we can make a Type with generics that makes any given type required with
+// given fields. Sort of like a RequiredField type generator
+
+// But first let's take a look at keyof type
+// This means key will be like an enum, with options = Object.keys(User)
+// so you can only use a key belonging to the User type as a value
+type keys = keyof User;
+
+// This will give a type where you can pass multiple values, but they must be
+//  a key of type user, that's how we extend keys.
+type AnyKeyOfUser extends keyof User
+
+// Now for the final magic
+// Here T will be the type we wanna modify, and the second param is,
+// list of keys that we want to be required.
+type RequireFields<T, K extends keyof T>
+
+// Final outpur
+// I hope the right had side is clear enough, if not please visit
+// combining type topic again
+type RequireFields<T, K extends keyof T> = Required<Pick<T, K>> & Omit<T, K>;
+
+// Usage
+const u2:RequireFields<User, 'id' | 'age'> = {
+  id: 2,
+  age: 23,
+  firstname: 'Talmeez',
+  lastname: 'Ahmed'
+}
+
+```
+
+## Enums
+
+Enums are a common type in most popular programming languages, and it means they are a collection of constants.
+
+Enums are great for defining constants that we often re-use and can't be any other than these set values.
+
+Using Enums in TypeScript, we quickly gain the option to see what assignments are valid for that Enum.
+
+Some eg:
+
+```typescript
+enum Drinks {
+  Milk,
+  Cola,
+  Soda,
+}
+
+// Usage
+// The value of enums start with 0, like arrays,
+// But you can assign custom defined values to them as well
+const myDrink = Drinks.Cola; // 1
+
+enum Sizes {
+  S = "S",
+  M = "M",
+  L = "L",
+}
+
+// Enums are very handy when it comes to using optional arguments,
+// Or even defining constants.
+// Speaking of constants, can you figure out how to convert constants
+// to types using TS Utilities.
+```
+
+## Unions
+
+Did you see a `union` in any code above? It goes like this:
+
+`type myUnion = string | number;` The TypeScript Union type is excellent if your type can consist of multiple values/types. We define a union type using the pipe character (|).
+
+Now as far as TS goes it’s good, but could cause problems in the future. Check out eg: below
+
+```typescript
+type myUnion = string | number;
+
+// I have to check the type of input every time,
+// since i don't know what it is. Forgetting to add
+// that if statement or missing out the ternary,
+// could lead to more confusion and havok later.
+
+// I would suggest to minimize the use of unions like this
+// only have it when there is no other approach.
+const myUnionFunction = (property: myUnion) => {
+  if (typeof property === "string") {
+    property = property.toUpperCase();
+  }
+  console.log(property);
+};
+
+myUnionFunction(123);
+myUnionFunction("abc");
+
+// But there are some good use cases of unions as well, given below
+// As far as React goes some good use-cases are
+type IsUser = User | LoggedUser;
+type Event = MouseEvent | KeyboardEvent;
+type Status = "not_started" | "progress" | "completed" | "failed";
+const setStatus = (status: Status) => {
+  db.object.setStatus(status);
+};
+setStatus("progress");
+setStatus("offline");
+```
+
+## Record
+
+The record utility type constructs an object type having keys and some other type.
+
+This means you can narrow down your records by only excepting specific keys or types of keys.
+
+Let's dive into those different scenarios, we will again consider our old school `User` interface.
+
+```typescript
+interface User {
+  id: number;
+  firstname: string;
+  lastname: string;
+  age?: number;
+}
+
+// This is a good use-case
+// Let's say we want to store a mapping of Users with their ids
+const users: Record<number, User> = {
+  0: {id: 1, firstname: 'Talmeez', lastname: 'Ahmed', age: 23},
+  1: {id: 2, firstname: 'Divyesh', lastname: 'Bhalani', age: 2},
+    2: {id: 2, firstname: 'Ravi', lastname: 'Sojitra'},
+};
+
+// Syntax
+// And yes, it is using generics.
+Record<Keys, Type>
+
+// Another example would be
+type Status = 'not_started' | 'progress' | 'completed' | 'failed';
+const statusTypes: Record<Status, {icon: string, color: string}> = {
+  not_started: {icon: 'icon-not-started', color: 'gray'},
+  progress: {icon: 'icon-progress', color: 'orange'},
+  completed: {icon: 'icon-completed', color: 'green'},
+  failed: {icon: 'icon-failed', color: 'red'},
+};
+```
+
+This will be the end. I hope this was helpful, it took hours of hard work to get this done. I always wanted to share my knowledge and help others grow as well. This is just the beginning.
+
+Thank for reading so far. 🙂
