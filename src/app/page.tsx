@@ -22,12 +22,8 @@ export default async function HomePage() {
             />
           </div>
           <div className="flex-grow text-left">
-            <p className="my-5 text-neutral-800 dark:text-neutral-200">
-              {about()}
-            </p>
-            <p className="my-5 max-w-[600px] text-neutral-800 dark:text-neutral-200">
-              {bio()}
-            </p>
+            <p className="my-5 text-neutral-200">{about()}</p>
+            <p className="my-5 max-w-[600px] text-neutral-200">{bio()}</p>
             <div className="flex justify-start items-center space-x-4">
               <Link href="https://github.com/tevez07b9">
                 <GitHubIcon />
@@ -44,7 +40,7 @@ export default async function HomePage() {
                 />
               </Link>
               <Link href="/blog">
-                <div className="flex items-center hover:text-neutral-700 dark:hover:text-neutral-200 transition-all">
+                <div className="flex items-center hover:text-neutral-200 transition-all">
                   <ArrowIcon />
                   <p className="h-7">Read my blogs</p>
                 </div>

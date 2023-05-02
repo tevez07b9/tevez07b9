@@ -63,7 +63,7 @@ export default async function Blog({ params }) {
           </div>
           <div className="w-[2px] h-[20px] bg-neutral-700 rounded-md"></div>
           <p>10min read</p>
-          <div className="h-[0.2em] bg-neutral-50 dark:bg-neutral-800 mx-2" />
+          <div className="h-[0.2em] bg-neutral-800 mx-2" />
         </div>
         <div className="max-w-full px-2 flex justify-center">
           <Mdx code={post.body.code} />

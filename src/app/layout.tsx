@@ -63,7 +63,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={clsx(
-        "text-black bg-white dark:text-textYellow dark:bg-[#0F0D0E]",
+        "text-textYellow bg-[#0F0D0E]",
         kaisei.variable,
         outfit.variable,
         paytone.variable
