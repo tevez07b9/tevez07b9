@@ -89,7 +89,8 @@ function ConsCard({ title, cons }) {
 }
 
 const components = {
-  Image: RoundedImage,
+  RoundedImage,
+  Image,
   a: CustomLink,
   Callout,
   ProsCard,

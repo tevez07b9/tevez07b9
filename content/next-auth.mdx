@@ -1,0 +1,467 @@
+---
+title: "How to use Next Auth with NextJS and Prisma"
+publishedAt: "May 4, 2023"
+summary: "A begineer's guide to next-auth"
+---
+
+Alright, you wanna authenticate your NextJs app but confused with the complexity of process. Too many options, protocols and libraries to deal with 🤯. Worry not, `next-auth` is here to save the day.
+
+With `next-auth` you can easily setup authentication in just a few steps, integrate multiple OAuth apps, use their custom hooks, integrate with multiple databases, dark mode and did I mention Server Side Rendering. `next-auth` got you covered with all you needs.
+
+This blog is gonna be an introduction on how to use it with OAuth apps, connecting with Prisma ORM, storing you data in Postgres and do Server Side Rendering with some sprinkles of TailwindCSS 🤌
+
+## Repo
+
+Entire source code [here](https://github.com/tevez07b9/next-auth-tut)
+
+## Contents
+
+- [Creating a project](#creating-a-project)
+- [Setting up next-auth](#setting-up-next-auth)
+- [Using the useSession hook](#using-the-usesession-hook)
+- [Server Side Rendering](#server-side-rendering)
+- [Custom Sign In page](#custom-sign-in-page)
+- [Connecting it with Prisma](#connecting-it-with-prisma)
+
+## Creating a project
+
+First let's create our Next.JS project with Tailwind. Run the following command with given configuration
+
+```
+npx create-next-app@latest --typescript next-auth-tut
+```
+
+<Image src="/images/next-auth/install.png" width={700} height={500} />
+
+Now running `npm run dev` inside your project folder should get you app running.
+
+## Setting up next-auth
+
+Up next we will install next-auth with the below command
+
+```
+npm install next-auth
+```
+
+Next Auth uses api routes to manage you authentication and callback urls from various OAuth apps. So create a file `pages/api/auth/[...nextauth].ts` and paste the following code
+
+```typescript
+// pages/api/auth/[...nextauth].ts
+
+import NextAuth from "next-auth";
+import { authOptions } from "@/config";
+
+export default NextAuth(authOptions);
+```
+
+We will store our next-auth config in a separate file, that way it's easier to edit.
+
+```typescript
+// src/config.ts
+import GithubProvider from "next-auth/providers/github";
+
+export const authOptions = {
+  providers: [
+    GithubProvider({
+      clientId: process.env.GITHUB_ID,
+      clientSecret: process.env.GITHUB_SECRET,
+    }),
+  ],
+};
+```
+
+I will be using Github as my OAuth app, `next-auth` uses a provider system to integrate various apps. If you wanna use email & password, you can use the `Credentials` provider. You can check all of them out [here](https://next-auth.js.org/providers/)
+
+As you have notice you need to setup and OAuth app in your github account, this is how you do it.
+Settings -> Developer Settings -> OAuth Apps and create a new one, copy the ClientID and Secret.
+
+Create your `.env.local` file in project root and add your keys
+
+```
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=968c24bc7ff074b65cb7c42fdfea11ec
+
+GITHUB_ID=
+GITHUB_SECRET=
+```
+
+If you are wondering what is `NEXTAUTH_SECRET`, it's a random token that `next-auth` uses to encrypt your jwt keys. I generated it from [here](https://generate-secret.now.sh/32)
+
+Well, that's it's for the setup. I highly recommend to read about their provider options [here](https://generate-secret.now.sh/32), after reading this blog.
+
+## Using the useSession hook
+
+To use their custom hook, we must first setup the context provider in our `src\pages\_app.tsx` file like so:
+
+```typescript
+// src\pages\_app.tsx
+import "@/styles/globals.css";
+import { SessionProvider } from "next-auth/react";
+import { AppProps } from "next/app";
+
+export default function App({
+  Component,
+  pageProps: { session, ...pageProps },
+}: AppProps) {
+  return (
+    <SessionProvider session={session}>
+      <Component {...pageProps} />
+    </SessionProvider>
+  );
+}
+```
+
+Next, create this header component in `src\components\Header.tsx`
+
+```typescript
+// src\components\Header.tsx
+import React from "react";
+import { Session } from "next-auth";
+import { signIn, signOut, useSession } from "next-auth/react";
+
+const User = ({ session }: { session: Session }) => {
+  return (
+    <div className="flex space-x-2">
+      <img
+        src={session?.user?.image || ""}
+        alt={session?.user?.name || ""}
+        className="rounded-full w-12 h-12"
+      />
+      <div className="flex flex-col">
+        <p>Signed in as:</p>
+        <span>{session?.user?.name || session?.user?.email}</span>
+      </div>
+    </div>
+  );
+};
+
+const Header = () => {
+  const { data: session } = useSession();
+
+  return (
+    <div className="w-full bg-gray-200 mt-2 rounded-md flex justify-between items-center p-2">
+      {!session ? <p>You are not signed in</p> : <User session={session} />}
+      <button
+        onClick={() => (session ? signOut() : signIn())}
+        className="px-3 py-2 text-white font-semibold rounded-md bg-blue-500"
+      >
+        Sign {session ? "Out" : "In"}
+      </button>
+    </div>
+  );
+};
+
+export default Header;
+```
+
+The `useSession` custom hook provides us with:
+
+- session - Data about the loggedIn user
+- signIn - Function to sign in with various providers
+- signOut - Function to logout users, cool thing is it works even with multiple tabs open 😎
+
+Let's create our `src\pages\index.tsx` homepage as given below
+
+```typescript
+// src\pages\index.tsx
+import Header from "@/components/Header";
+import React from "react";
+
+const IndexPage = () => {
+  return (
+    <div className="w-screen h-screen text-gray-700 bg-white flex justify-center">
+      <div className="w-2/3 flex flex-col">
+        <Header />
+      </div>
+    </div>
+  );
+};
+
+export default IndexPage;
+```
+
+Phew, that was a lot of work, but we are done. You now have a basic auth app. The `signIn` page with dark mode is created by `next-auth`. Cool huh. Let's move forward.
+
+## Server Side Rendering
+
+Let's checkout the Server Side capabilities of this library. Create a profile page, that has restricted access to loggedIn users only.
+
+```typescript
+// src\pages\profile.tsx
+
+import React from "react";
+import Header from "@/components/Header";
+import { authOptions } from "@/config";
+import { GetServerSidePropsContext, InferGetServerSidePropsType } from "next";
+import { getServerSession } from "next-auth";
+
+const Profile = ({
+  user,
+  expires,
+}: InferGetServerSidePropsType<typeof getServerSideProps>) => {
+  return (
+    <div className="w-screen h-screen text-gray-700 bg-white flex justify-center">
+      <div className="w-2/3 flex flex-col">
+        <Header />
+        <div className="mt-3">
+          {<pre>{JSON.stringify({ user, expires }, null, 2)}</pre>}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Export the `session` prop to use sessions with Server Side Rendering
+export async function getServerSideProps(context: GetServerSidePropsContext) {
+  const session = await getServerSession(context.req, context.res, authOptions);
+  if (!session) {
+    return { redirect: { destination: "/" } };
+  }
+  return {
+    props: {
+      user: session.user,
+      expires: session.expires,
+    },
+  };
+}
+
+export default Profile;
+```
+
+The `getServerSession` is the helper function that provides us with the session data we need Server Side. We then pass it as props to the profile page.
+
+## Custom Sign In page
+
+Oviously the default SignIn page is too generic, let's see how we can use our own custom page. Create you custom signin page at `src\pages\auth\signin.tsx` and paste the code below.
+
+```typescript
+// src\pages\auth\signin.tsx
+
+import type {
+  GetServerSidePropsContext,
+  InferGetServerSidePropsType,
+} from "next";
+import { getProviders } from "next-auth/react";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/config";
+import { Provider } from "@/components/ProviderBtns";
+
+export default function SignIn({
+  providers,
+}: InferGetServerSidePropsType<typeof getServerSideProps>) {
+  return (
+    <div className="w-screen h-screen bg-white flex justify-center items-center text-gray-700">
+      <div className="p-3 bg-gray-200 rounded-lg min-w-[40%]">
+        {Object.values(providers).map((provider) => (
+          <Provider key={provider.name} provider={provider} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export async function getServerSideProps(context: GetServerSidePropsContext) {
+  const session = await getServerSession(context.req, context.res, authOptions);
+
+  // If the user is already logged in, redirect.
+  // Note: Make sure not to redirect to the same page
+  // To avoid an infinite loop!
+  if (session) {
+    return { redirect: { destination: "/" } };
+  }
+
+  const providers = await getProviders();
+
+  return {
+    props: {
+      providers: providers ?? [],
+    },
+  };
+}
+```
+
+The `getProviders` helper functions gives us the various providers we have setup for the project. We loop over them use the below component to render provider specific UIs
+
+```typescript
+// src\components\ProviderBtns.tsx
+
+import { ClientSafeProvider, signIn } from "next-auth/react";
+import React from "react";
+import { GitHub } from "react-feather";
+
+const Github: React.FC<{ provider: ClientSafeProvider }> = ({ provider }) => {
+  return (
+    <div className="w-full flex justify-center mb-2">
+      <div
+        className="flex items-center space-x-2 bg-stone-800 hover:bg-stone-900 text-white px-4 py-2 rounded-lg cursor-pointer"
+        onClick={() => signIn(provider.id)}
+      >
+        <GitHub />
+        <p>Github</p>
+      </div>
+    </div>
+  );
+};
+
+export const Provider: React.FC<{ provider: ClientSafeProvider }> = ({
+  provider,
+}) => {
+  if (provider.name === "GitHub") return <Github provider={provider} />;
+  return <></>;
+};
+```
+
+Finally we have to inform `next-auth` about our custom page, replace the config file `src\config.ts` with the code below
+
+```typescript
+// src/config.ts
+import GithubProvider from "next-auth/providers/github";
+
+export const authOptions = {
+  providers: [
+    GithubProvider({
+      clientId: process.env.GITHUB_ID,
+      clientSecret: process.env.GITHUB_SECRET,
+    }),
+  ],
+  pages: {
+    signIn: "/auth/signin",
+  },
+};
+```
+
+You can setup various other custom pages based on your needs. Check them out [here](https://next-auth.js.org/configuration/pages)
+
+## Connecting it with Prisma
+
+All of the above is meaningless, speechless, brainless, heartless etc. 😅 if we don't store the data in a database. Let's connect our `next-auth` with a postgres db using Prisma 🤩
+
+You will need a local postgres setup to do this, I used docker for this, but you can use any other method that you prefer or even a cloud solution.
+To connect to your database add this `DATABASE_URL` to your `.env` file. With that taken care of, let's start by installing prisma.
+
+```
+npm install next-auth @prisma/client @next-auth/prisma-adapter
+npm install prisma --save-dev
+```
+
+This will install all the required dependencies to your project. With prisma you need to specify a schema to use with your database. Below is a basic schema that you can use with `next-auth`. Add this code to `prisma/schema.prisma` file.
+
+```prisma
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+```
+
+Next we need to migrate this schema to our postgres database, the below command will create an SQL migration file and execute it
+
+```
+npx prisma migrate dev
+```
+
+To learn more about [Prisma Migrate](https://www.prisma.io/migrate), check out the [Migrate docs](https://www.prisma.io/docs/concepts/components/prisma-migrate).
+
+Once you have saved your schema, use the Prisma CLI to generate the Prisma Client:
+
+```
+npx prisma generate
+```
+
+This will create a prisma client, with type safety that you can use in you nextjs api routes if you want to.
+Let's create a `PrismaClient` that we can reuse in our code. Paste this code to `src/lib/prisma.ts`
+
+```typescript
+// src/lib/prisma.ts
+
+import { PrismaClient } from "@prisma/client";
+
+// PrismaClient is attached to the `global` object in development to prevent
+// exhausting your database connection limit.
+//
+// Learn more:
+// https://pris.ly/d/help/next-js-best-practices
+
+const globalForPrisma = global as unknown as { prisma: PrismaClient };
+
+export const prisma = globalForPrisma.prisma || new PrismaClient();
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+
+export default prisma;
+```
+
+Finally the last step will be to configure `next-auth` with `prisma`. Update the code in `src/config.ts` with the following:
+
+```typescript
+// src/config.ts
+
+import GithubProvider from "next-auth/providers/github";
+import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import prisma from "./lib/prisma";
+
+export const authOptions = {
+  adapter: PrismaAdapter(prisma),
+  providers: [
+    GithubProvider({
+      clientId: process.env.GITHUB_ID,
+      clientSecret: process.env.GITHUB_SECRET,
+    }),
+  ],
+};
+```
+
+That's it, you now have a fully functioning app with `next-auth`. This was a basic tutorial on how to get started with `next-auth`.
+I high recommend to go through their docs after reading this.
+At any point if you got stuck you can always check out my repo for the source code of this tutorial.
