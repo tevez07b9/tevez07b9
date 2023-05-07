@@ -17,10 +17,11 @@ export const about = () => {
 export const bio = () => {
   return (
     <>
-      I&apos;m a Full Stack Web Developer with pro design skills and TypeScript
-      knowledge. My goal is to teach people web development and become more than
-      just a developer. I&apos;m passionate about Web development and sharing my
-      knowledge as I grow.
+      As a Senior Frontend Developer, I am passionate about creating engaging
+      user experiences through beautiful and functional designs. With a focus on
+      attention to detail and delivering results, I strive to bring a unique
+      perspective to every project. My goal is to teach people web development
+      and become more than just a developer.
       <br />
       <br />
       When I&apos;m not busy being awesome, you can find me reading up on the
