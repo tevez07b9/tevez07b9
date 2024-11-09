@@ -10,9 +10,14 @@ const Header = () => {
       <Link href="/">
         <Logo />
       </Link>
-      <Link href="/blog">
-        <span className="hover:underline">Blogs </span>
-      </Link>
+      <div className="flex items-center gap-8">
+        <Link href="/blog">
+          <span className="hover:underline">Blogs </span>
+        </Link>
+        <Link href="/projects">
+          <span className="hover:underline">Projects </span>
+        </Link>
+      </div>
       <Link href="https://github.com/tevez07b9/tevez07b9">
         <GitHubIcon />
       </Link>

@@ -71,7 +71,7 @@ export default function RootLayout({
     >
       <body className="min-w-full min-h-screen">
         <Header />
-        <main className="max-w-4xl mx-auto flex-auto px-4 pt-4 pb-8 md:p-0">
+        <main className="max-w-4xl mx-auto flex-auto px-4 pt-4 pb-8 md:p-0 mt-4 md:mt-8">
           {children}
         </main>
       </body>

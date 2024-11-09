@@ -15,6 +15,9 @@ module.exports = {
       colors: {
         textYellow: "rgb(249, 244, 218)",
         "brand-pink": "#f38ba3",
+        charcoal: "#231f20",
+        yellow: "#fcba28",
+        cream: "#f6f1d7",
       },
       typography: {
         quoteless: {

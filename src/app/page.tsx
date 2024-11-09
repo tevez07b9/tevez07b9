@@ -11,7 +11,7 @@ export default async function HomePage() {
     <div className="flex flex-col justify-center items-center min-h-screen">
       <section className="max-w-4xl flex-auto min-w-0 mt-6 md:mt-10 flex flex-col px-4 pt-4 pb-8 md:p-0 text-center">
         <h1 className="font-bold text-6xl font-paytone">{name}</h1>
-        <div className="w-full flex flex-col md:flex-row text-center mt-6">
+        <div className="w-full flex flex-col md:flex-row items-center text-center mt-6">
           <div className="w-full flex-grow my-5">
             <Image
               alt={name}
