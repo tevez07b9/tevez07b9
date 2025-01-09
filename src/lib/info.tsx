@@ -13,7 +13,7 @@ export const about = () => {
       <a className="link" href="https://www.dhiwise.com/">
         Dhiwise
       </a>{" "}
-      Developer
+      Developer with over <b>4yrs</b> of experience
     </>
   );
 };

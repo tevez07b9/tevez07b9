@@ -40,10 +40,10 @@ export default async function HomePage() {
                   alt="LinkedIn"
                 />
               </Link>
-              <Link href="/blog">
+              <Link href="/projects">
                 <div className="flex items-center hover:text-neutral-200 transition-all">
                   <ArrowIcon />
-                  <p className="h-7">Read my blogs</p>
+                  <p className="h-7">My Projects</p>
                 </div>
               </Link>
             </div>
